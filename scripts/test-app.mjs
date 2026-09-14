@@ -80,7 +80,10 @@ check('le champ email est présent', await page.locator('#authEmail').isVisible(
 
 // La délégation d'événements remplace les attributs onclick : si elle
 // ne fonctionne pas, plus rien n'est cliquable dans l'application.
+check('le champ mot de passe est présent', await page.locator('#authPassword').isVisible());
+
 await page.fill('#authEmail', 'pas-une-adresse');
+await page.fill('#authPassword', 'peu importe');
 await page.click('#authSubmit');
 await page.waitForTimeout(300);
 const emailError = (await page.locator('#authError').textContent() || '').trim();
@@ -88,10 +91,21 @@ check('la soumission passe par la délégation et refuse une adresse invalide',
   emailError.length > 0, emailError || '(aucun message)');
 check('le message de validation est le nôtre, pas celui du navigateur',
   /adresse email valide/i.test(emailError), emailError);
-
-// Le champ garde le focus pour corriger sans re-cliquer.
 check('le champ fautif reprend le focus',
   await page.evaluate(() => document.activeElement && document.activeElement.id === 'authEmail'));
+
+// Un mot de passe manquant doit être signalé avant tout appel réseau.
+await page.fill('#authEmail', 'valide@exemple.fr');
+await page.fill('#authPassword', '');
+await page.click('#authSubmit');
+await page.waitForTimeout(300);
+const passError = (await page.locator('#authError').textContent() || '').trim();
+check('un mot de passe vide est refusé sans appel réseau',
+  /mot de passe/i.test(passError), passError || '(aucun message)');
+
+// Le mot de passe ne doit jamais être lisible à l'écran.
+check('le mot de passe est masqué',
+  (await page.locator('#authPassword').getAttribute('type')) === 'password');
 
 check('les librairies embarquées sont chargées',
   await page.evaluate(() => typeof window.Chart !== 'undefined'

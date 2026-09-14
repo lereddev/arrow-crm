@@ -6,8 +6,9 @@ température, suivi des appels et des rendez-vous, agenda partagé.
 ## Ce que c'est
 
 Une application web servie en statique, adossée à une base Postgres
-(Supabase). L'accès se fait par lien magique, sur invitation. Aucune
-donnée de prospection n'est accessible sans compte.
+(Supabase). L'accès se fait par identifiant et mot de passe, sur comptes créés par
+la direction. Aucune donnée de prospection n'est accessible sans compte,
+et l'application n'envoie aucun email.
 
 - `app/` — l'application (le répertoire publié)
 - `supabase/migrations/` — le schéma, les règles d'accès et l'API
@@ -24,7 +25,7 @@ déjà corrigés à ne pas réintroduire, et pièges de l'environnement.
 ## Architecture
 
 ```
-Navigateur ── lien magique ──▶ Supabase Auth
+Navigateur ── mot de passe ──▶ Supabase Auth
      │
      └── requêtes filtrées ──▶ Postgres + Row Level Security
                                  ├─ leads         (lecture seule)

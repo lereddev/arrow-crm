@@ -89,13 +89,39 @@ curl -sI https://VOTRE-DOMAINE | grep -i 'content-security\|strict-transport\|x-
 
 ## 3. Les comptes
 
-### Inviter un commercial
+### Créer le compte d'un commercial
 
-Dashboard Supabase → Authentication → Users → *Invite user* → son
-adresse professionnelle.
+Dashboard Supabase → Authentication → Users → **Add user** → **Create
+new user**.
 
-La ligne correspondante dans `app_users` est créée automatiquement avec
+- son adresse professionnelle
+- un mot de passe (12 caractères minimum, généré au hasard)
+- cocher **Auto Confirm User**
+
+**Aucun email n'est envoyé.** Transmets-lui ses identifiants de vive voix
+ou par un canal sûr, et demande-lui de le changer à la première
+connexion.
+
+Ce choix est délibéré : le service d'envoi par défaut de Supabase est
+plafonné à quelques messages par heure. Avec une authentification par
+email, la deuxième personne qui se connecte le matin reste dehors.
+
+La ligne correspondante dans `app_users` est créée automatiquement, avec
 le rôle `commercial`.
+
+### Réinitialiser un mot de passe oublié
+
+Toujours sans email, avec la clé de service :
+
+```bash
+curl -X PUT "https://VOTRE-PROJET.supabase.co/auth/v1/admin/users/UID_DE_LA_PERSONNE" \
+  -H "apikey: CLE_SECRETE" \
+  -H "Authorization: Bearer CLE_SECRETE" \
+  -H "Content-Type: application/json" \
+  -d '{"password":"NOUVEAU_MOT_DE_PASSE"}'
+```
+
+L'UID se lit dans Authentication → Users.
 
 ### Se donner le rôle directeur
 

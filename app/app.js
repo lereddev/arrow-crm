@@ -44,30 +44,30 @@ function failed(action, error) {
 }
 
 // ── Authentification ─────────────────────────────────────────────
-async function sendMagicLink(email) {
+// Connexion par mot de passe. Aucun email n'est envoyé : les comptes
+// sont créés par la direction depuis le tableau de bord Supabase, avec
+// leur mot de passe. Le service d'envoi par défaut est plafonné à
+// quelques messages par heure, ce qui rendrait toute authentification
+// par email inutilisable dès le deuxième commercial.
+async function signIn(email, password) {
   const client = sb();
   if (!client) return { ok: false, message: "L'application n'est pas configurée." };
 
-  const { error } = await client.auth.signInWithOtp({
-    email: email,
-    options: {
-      // Décisif : sans cette option, saisir une adresse inconnue
-      // créerait le compte. L'accès se fait sur invitation uniquement.
-      shouldCreateUser: false,
-      emailRedirectTo: window.location.origin + window.location.pathname
-    }
-  });
+  const { error } = await client.auth.signInWithPassword({ email: email, password: password });
 
-  if (error) {
-    const known = /not.*(allowed|found)|signups? not allowed|invalid/i.test(error.message || '');
-    return {
-      ok: false,
-      message: known
-        ? "Cette adresse n'a pas accès à l'application. Demandez une invitation."
-        : 'Envoi impossible : ' + error.message
-    };
-  }
-  return { ok: true, message: 'Lien envoyé. Ouvrez votre boîte mail et cliquez dessus.' };
+  if (!error) return { ok: true };
+
+  // Un message unique pour l'adresse inconnue et le mot de passe faux :
+  // distinguer les deux permettrait d'énumérer les comptes existants.
+  const credentials = /invalid login credentials|invalid grant/i.test(error.message || '');
+  const rate = /rate limit|too many/i.test(error.message || '');
+
+  return {
+    ok: false,
+    message: credentials ? 'Adresse ou mot de passe incorrect.'
+           : rate        ? 'Trop de tentatives. Patientez une minute.'
+           : 'Connexion impossible : ' + error.message
+  };
 }
 
 async function signOut() {
@@ -1233,7 +1233,7 @@ function showGate(view) {
   if (!gate || !app) return;
   gate.style.display = view === 'app' ? 'none' : 'flex';
   app.style.display  = view === 'app' ? '' : 'none';
-  ['authLoading', 'authLogin', 'authSent', 'authFatal'].forEach(id => {
+  ['authLoading', 'authLogin', 'authFatal'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = (id === 'auth' + view.charAt(0).toUpperCase() + view.slice(1)) ? '' : 'none';
   });
@@ -1248,9 +1248,11 @@ function showFatal(message) {
 async function handleLoginSubmit(event) {
   event.preventDefault();
   const input = document.getElementById('authEmail');
+  const pass  = document.getElementById('authPassword');
   const btn   = document.getElementById('authSubmit');
   const err   = document.getElementById('authError');
   const email = (input.value || '').trim().toLowerCase();
+  const password = pass.value || '';
 
   err.textContent = '';
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
@@ -1258,20 +1260,28 @@ async function handleLoginSubmit(event) {
     input.focus();
     return;
   }
+  if (!password) {
+    err.textContent = 'Saisissez votre mot de passe.';
+    pass.focus();
+    return;
+  }
 
   btn.disabled = true;
   const previous = btn.textContent;
-  btn.textContent = 'Envoi…';
+  btn.textContent = 'Connexion…';
 
-  const result = await sendMagicLink(email);
+  const result = await signIn(email, password);
 
   btn.disabled = false;
   btn.textContent = previous;
 
-  if (!result.ok) { err.textContent = result.message; return; }
-  const sentTo = document.getElementById('authSentTo');
-  if (sentTo) sentTo.textContent = email;
-  showGate('sent');
+  if (!result.ok) {
+    err.textContent = result.message;
+    pass.value = '';
+    pass.focus();
+    return;
+  }
+  // enterApp() est déclenché par l'événement SIGNED_IN.
 }
 
 async function enterApp() {

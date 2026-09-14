@@ -28,23 +28,19 @@
 
     <form novalidate class="auth-state" id="authLogin" style="display:none">
       <h1 class="auth-title">Connexion</h1>
-      <p class="auth-lead">Saisissez votre adresse professionnelle. Vous recevrez un lien de connexion valable quelques minutes.</p>
+      <p class="auth-lead">Identifiants fournis par la direction d’agence.</p>
       <label class="auth-label" for="authEmail">Adresse email</label>
       <input class="auth-input" id="authEmail" name="email" type="email"
-             autocomplete="email" inputmode="email" spellcheck="false" required
+             autocomplete="username" inputmode="email" spellcheck="false" required
              placeholder="prenom.nom@exemple.fr">
+      <label class="auth-label" for="authPassword">Mot de passe</label>
+      <input class="auth-input" id="authPassword" name="password" type="password"
+             autocomplete="current-password" required>
       <p class="auth-error" id="authError" role="alert"></p>
-      <button class="auth-btn" id="authSubmit" type="submit">Recevoir mon lien</button>
-      <p class="auth-foot">L’accès est réservé aux comptes invités par la direction d’agence.</p>
+      <button class="auth-btn" id="authSubmit" type="submit">Se connecter</button>
+      <p class="auth-foot">Mot de passe oublié : contactez votre directeur d’agence, il le
+         réinitialise en quelques secondes.</p>
     </form>
-
-    <div class="auth-state" id="authSent" style="display:none">
-      <div class="auth-icon">📬</div>
-      <h1 class="auth-title">Lien envoyé</h1>
-      <p class="auth-lead">Un lien de connexion vient de partir vers <strong id="authSentTo"></strong>.
-         Ouvrez-le depuis cet appareil.</p>
-      <button class="auth-btn auth-btn-ghost" type="button" data-act="relogin">Utiliser une autre adresse</button>
-    </div>
 
     <div class="auth-state" id="authFatal" style="display:none">
       <div class="auth-icon">⚠️</div>

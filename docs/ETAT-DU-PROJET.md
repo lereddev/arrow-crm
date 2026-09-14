@@ -48,7 +48,7 @@ arrivent par pages de 50.
 ## 3. Architecture
 
 ```
-Navigateur ── lien magique ──▶ Supabase Auth
+Navigateur ── mot de passe ──▶ Supabase Auth
      │
      └── requêtes filtrées ──▶ Postgres + Row Level Security
                                  ├─ leads         (lecture seule)
@@ -232,27 +232,29 @@ relecture.
 - Compte du propriétaire créé et promu `directeur`.
 - URL d'API corrigée, la communication avec Supabase fonctionne.
 
-### Bloqué
+### Résolu : l'authentification n'envoie plus d'email
 
-**L'envoi d'emails.** `email rate limit exceeded`.
+Le projet a d'abord été construit avec une authentification par lien
+magique. Erreur de conception : le serveur d'envoi par défaut de Supabase
+est un service de démonstration plafonné à quelques messages par heure,
+et **chaque connexion consommait un email**. Dix commerciaux se
+connectant le lundi matin saturaient le quota en quelques minutes.
 
-Le serveur SMTP par défaut de Supabase est un service de démonstration
-limité à quelques messages par heure. Or, avec une authentification par
-lien magique, **chaque connexion consomme un email**. Dix commerciaux qui
-se connectent le lundi matin saturent le quota en quelques minutes.
+Le parcours est désormais **email + mot de passe**
+(`signInWithPassword`). L'application n'envoie plus aucun email, il n'y a
+plus de dépendance à un service tiers et plus de quota.
 
-C'est un manque de la conception initiale : le lien magique a été retenu
-sans prévoir l'infrastructure d'envoi correspondante.
+Conséquences :
 
-**La prochaine tâche est donc de brancher un SMTP** (Supabase →
-Authentication → Emails → SMTP Settings). Deux pistes évaluées : Brevo
-(300 emails/jour gratuits, ne réclame pas de domaine, validation d'un
-simple expéditeur) ou Resend (meilleure délivrabilité, mais exige un
-domaine possédé). Le propriétaire n'a pas encore indiqué s'il dispose
-d'un domaine.
+- les comptes sont créés par la direction (Authentication → Users → Add
+  user → Create new user, avec *Auto Confirm User*) ;
+- la réinitialisation d'un mot de passe passe par l'API admin, procédure
+  dans `docs/DEPLOIEMENT.md` ;
+- le message d'erreur ne distingue pas l'adresse inconnue du mot de passe
+  faux, pour ne pas permettre d'énumérer les comptes existants.
 
-Une fois le SMTP branché, la page **Rate Limits** de Supabase devient
-exploitable : le plafond n'y est réglable qu'avec un SMTP personnalisé.
+Un SMTP reste souhaitable à terme (notifications, réinitialisation en
+autonomie), mais il n'est plus sur le chemin critique.
 
 ### Reste à faire ensuite
 
