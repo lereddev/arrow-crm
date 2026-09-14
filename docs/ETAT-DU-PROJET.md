@@ -91,7 +91,7 @@ scripts/
   build.mjs             génère config.js et les bundles
   import-leads.mjs      import des leads (clé de service)
   lib/leads.mjs         transformations pures, testables
-  test-app.mjs          11 tests navigateur
+  test-app.mjs          14 tests navigateur
   test-import.test.mjs  11 tests unitaires
   test-db.sh            lance les 53 tests SQL
 docs/
@@ -169,10 +169,10 @@ en cascade.
 ```bash
 npm run test:db      # 53 tests des règles d'accès (Postgres 16 local requis)
 npm run test:import  # 11 tests de transformation des leads
-npm run test:app     # 11 tests navigateur (Chromium requis)
+npm run test:app     # 14 tests navigateur (Chromium requis)
 ```
 
-**75 tests au total, tous au vert.**
+**78 tests au total, tous au vert.**
 
 `test:db` recrée une base vide à chaque exécution et rejoue les
 migrations : un test dépendant de l'état laissé par le précédent ne

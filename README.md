@@ -69,7 +69,7 @@ npm run test:import  # transformation des leads
 npm run test:app     # navigateur, page servie avec sa CSP réelle
 ```
 
-75 tests au total. `test:db` demande un Postgres 16 local, `test:app`
+78 tests au total. `test:db` demande un Postgres 16 local, `test:app`
 un Chromium (`npx playwright install chromium`).
 
 ## Importer les leads
