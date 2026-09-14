@@ -1,0 +1,82 @@
+# Arrow CRM
+
+Application de prospection de l'agence : 14 028 leads, qualification par
+température, suivi des appels et des rendez-vous, agenda partagé.
+
+## Ce que c'est
+
+Une application web servie en statique, adossée à une base Postgres
+(Supabase). L'accès se fait par lien magique, sur invitation. Aucune
+donnée de prospection n'est accessible sans compte.
+
+- `app/` — l'application (le répertoire publié)
+- `supabase/migrations/` — le schéma, les règles d'accès et l'API
+- `scripts/` — build et import des leads
+- `docs/` — mise en ligne et sécurité
+
+## Architecture
+
+```
+Navigateur ── lien magique ──▶ Supabase Auth
+     │
+     └── requêtes filtrées ──▶ Postgres + Row Level Security
+                                 ├─ leads         (lecture seule)
+                                 ├─ lead_notes    (chacun écrit les siennes)
+                                 ├─ lead_issues   (statut partagé)
+                                 └─ agenda        (chacun gère ses RDV)
+```
+
+Points structurants :
+
+- **Les leads ne quittent jamais la base en bloc.** Chaque onglet
+  demande une page de 50 lignes, filtrée et triée en SQL
+  (`search_leads`). Un fichier de prospection servi en statique serait
+  téléchargeable par n'importe qui connaissant son URL.
+- **Le tableau de bord lit des agrégats calculés en base**, pas des
+  chiffres figés dans la page.
+- **Aucune dépendance chargée à l'exécution depuis un CDN.** Supabase
+  et Chart.js sont regroupés au build et servis depuis le même domaine.
+- **Une librairie absente dégrade, elle ne casse pas.** Sans Chart.js,
+  les graphiques affichent un message et l'application fonctionne.
+
+## Démarrer en local
+
+```bash
+cp .env.example .env      # renseigner SUPABASE_URL et SUPABASE_ANON_KEY
+npm install
+npm run dev               # build + serveur local sur http://localhost:5173
+```
+
+`npm run build` génère `app/config.js` et `app/vendor/`. Ces fichiers
+ne sont pas versionnés : ils dépendent de l'environnement.
+
+## Importer les leads
+
+```bash
+SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... npm run import-leads
+```
+
+Idempotent : relancer réimporte par-dessus. La clé de service contourne
+RLS et ne doit jamais sortir de ta machine.
+
+## Rôles
+
+| Rôle | Leads | Notes | Agenda |
+|---|---|---|---|
+| `commercial` | lit tout | lit tout, écrit et supprime les siennes | lit tout, gère les siens |
+| `directeur` | lit tout | lit tout, corrige et supprime toutes | lit tout, gère tous |
+
+Les statuts téléphone et rendez-vous sont partagés : c'est l'état
+courant du lead pour l'agence, tout commercial actif peut le poser.
+
+Un compte désactivé (`active = false`) perd tout accès et conserve son
+historique.
+
+## Mise en ligne
+
+Voir [docs/DEPLOIEMENT.md](docs/DEPLOIEMENT.md).
+
+## Sécurité
+
+Voir [docs/SECURITE.md](docs/SECURITE.md), en particulier la rotation
+des clés et la purge de l'historique Git.

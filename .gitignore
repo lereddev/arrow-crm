@@ -1,0 +1,10 @@
+node_modules/
+.env
+.env.local
+
+# Générés par le build
+app/config.js
+app/vendor/
+
+# Export brut de prospection : données nominatives, hors du dépôt.
+data.json
