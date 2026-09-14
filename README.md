@@ -38,6 +38,9 @@ Points structurants :
   et Chart.js sont regroupés au build et servis depuis le même domaine.
 - **Une librairie absente dégrade, elle ne casse pas.** Sans Chart.js,
   les graphiques affichent un message et l'application fonctionne.
+- **Aucun script inline, aucun attribut `onclick`.** Les événements
+  passent par un écouteur unique et délégué, ce qui permet une CSP en
+  `script-src 'self'`.
 
 ## Démarrer en local
 
@@ -49,6 +52,17 @@ npm run dev               # build + serveur local sur http://localhost:5173
 
 `npm run build` génère `app/config.js` et `app/vendor/`. Ces fichiers
 ne sont pas versionnés : ils dépendent de l'environnement.
+
+## Tests
+
+```bash
+npm run test:db      # règles d'accès, sur un Postgres local
+npm run test:import  # transformation des leads
+npm run test:app     # navigateur, page servie avec sa CSP réelle
+```
+
+75 tests au total. `test:db` demande un Postgres 16 local, `test:app`
+un Chromium (`npx playwright install chromium`).
 
 ## Importer les leads
 

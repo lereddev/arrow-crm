@@ -6,15 +6,20 @@
   "description": "CRM de prospection Arrow — application web et base Supabase.",
   "scripts": {
     "build": "node scripts/build.mjs",
+    "dev": "npm run build && npx --yes serve app -l 5173",
     "import-leads": "node scripts/import-leads.mjs data.json",
-    "dev": "npm run build && npx --yes serve app -l 5173"
+    "test": "npm run test:import && npm run test:app",
+    "test:import": "node --test scripts/test-import.test.mjs",
+    "test:app": "node scripts/test-app.mjs",
+    "test:db": "./scripts/test-db.sh"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.45.4",
     "chart.js": "4.4.4"
   },
   "devDependencies": {
-    "esbuild": "0.23.1"
+    "esbuild": "0.23.1",
+    "playwright": "1.47.2"
   },
   "engines": {
     "node": ">=20"

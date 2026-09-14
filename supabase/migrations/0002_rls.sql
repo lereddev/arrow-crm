@@ -97,9 +97,20 @@ security definer
 set search_path = public, pg_temp
 as $$
 begin
+  -- Pas de session utilisateur : administration directe (SQL Editor,
+  -- clé de service, migration). Ces chemins ne passent pas par
+  -- PostgREST et doivent pouvoir promouvoir le premier directeur.
+  -- Un compte authentifié sans identité valide n'arrive jamais ici :
+  -- les policies UPDATE exigent `id = auth.uid()` ou `is_directeur()`,
+  -- toutes deux fausses quand auth.uid() est null.
+  if auth.uid() is null then
+    return new;
+  end if;
+
   if public.is_directeur() then
     return new;
   end if;
+
   if new.role is distinct from old.role
      or new.active is distinct from old.active
      or new.commercial_code is distinct from old.commercial_code

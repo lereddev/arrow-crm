@@ -86,19 +86,42 @@ Ce qui reste à ta charge, et qui ne relève pas du code :
 - vérifier que la mention d'information à la prospection est bien
   délivrée
 
+## Tests
+
+Trois suites, exécutables séparément :
+
+```bash
+npm run test:db      # 53 tests des règles d'accès, sur un Postgres local
+npm run test:import  # 11 tests de la transformation des leads
+npm run test:app     # 11 tests navigateur, page servie avec sa CSP réelle
+npm test             # les deux dernières (test:db exige un Postgres)
+```
+
+`test:db` repart d'une base vide à chaque exécution et rejoue les
+migrations : un test qui dépend de l'état laissé par le précédent ne
+prouve rien. Il vérifie notamment qu'un commercial ne peut ni se
+nommer directeur, ni se réactiver un accès coupé, ni signer une note
+au nom d'un collègue, ni modifier un lead, et qu'une chaîne
+malveillante passée en colonne de tri n'atteint jamais le plan de
+requête.
+
+`test:app` sert la page avec les en-têtes lus dans `vercel.json`, pas
+avec des en-têtes de test : le jour où la CSP de production diverge,
+la suite échoue. Il exige un Chromium (`npx playwright install
+chromium`, ou `CHROME_PATH` vers un binaire existant).
+
 ## Dette connue
 
-**`unsafe-inline` dans la CSP.** L'interface utilise des attributs
-`onclick` en ligne et une feuille de style embarquée, ce qui impose
-`script-src 'unsafe-inline'`. La protection contre le XSS en est
-nettement affaiblie : une chaîne non échappée injectée dans le DOM
-deviendrait exécutable.
+**`unsafe-inline` sur `style-src`.** Les scripts inline et les
+attributs `onclick` ont été supprimés : la page passe les événements
+par un écouteur unique et délégué, et la CSP applique désormais
+`script-src 'self'`. Du code injecté dans la page ne s'exécute plus.
 
-Le risque est aujourd'hui limité — les seules données affichées
-proviennent de la base, et `sanitize()` est appliqué aux champs texte —
-mais il ne disparaîtra qu'en remplaçant les `onclick` par des
-écouteurs délégués et en sortant le CSS dans un fichier. C'est la
-première dette à résorber.
+Il subsiste une trentaine d'attributs `style=`, ce qui impose
+`style-src 'unsafe-inline'`. Le risque résiduel est d'un tout autre
+ordre : du CSS injecté peut servir à exfiltrer par sélecteurs
+d'attributs, il n'exécute pas de code. À reprendre en remplaçant ces
+attributs par des classes.
 
 **Pas de limitation de débit applicative.** Supabase applique ses
 propres quotas sur l'envoi d'emails d'authentification. Aucune
