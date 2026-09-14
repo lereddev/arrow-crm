@@ -32,12 +32,29 @@ if (/service_role/i.test(anonKey) || anonKey.startsWith('sb_secret')) {
   process.exit(1);
 }
 
+// L'adresse du dashboard et celle de l'API se ressemblent assez pour
+// être confondues au copier-coller, et l'erreur ne se voit qu'une fois
+// en ligne : la page se charge, puis chaque appel échoue sans
+// explication. Autant refuser de construire.
+const cleanUrl = url.trim();
+if (!/^https:\/\/[a-z0-9-]+\.supabase\.(co|in)$/.test(cleanUrl)) {
+  console.error(`SUPABASE_URL n'a pas la forme attendue : "${url}"`);
+  console.error('Attendu : https://<reference>.supabase.co');
+  console.error("C'est l'URL d'API du projet (Settings > API), pas l'adresse");
+  console.error('de la page du dashboard, et sans barre oblique finale.');
+  process.exit(1);
+}
+
+if (cleanUrl !== url) {
+  console.warn('Note : espaces superflus retirés de SUPABASE_URL.');
+}
+
 await mkdir(join(appDir, 'vendor'), { recursive: true });
 
 await writeFile(
   join(appDir, 'config.js'),
   `// Généré par scripts/build.mjs — ne pas modifier à la main.\n`
-  + `window.ARROW_CONFIG = ${JSON.stringify({ supabaseUrl: url, supabaseAnonKey: anonKey }, null, 2)};\n`,
+  + `window.ARROW_CONFIG = ${JSON.stringify({ supabaseUrl: cleanUrl, supabaseAnonKey: anonKey.trim() }, null, 2)};\n`,
   'utf8'
 );
 console.log('app/config.js généré.');
