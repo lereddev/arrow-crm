@@ -14,6 +14,13 @@ donnée de prospection n'est accessible sans compte.
 - `scripts/` — build et import des leads
 - `docs/` — mise en ligne et sécurité
 
+## Reprendre le projet
+
+Si tu arrives sur ce dépôt sans contexte, lis
+[docs/ETAT-DU-PROJET.md](docs/ETAT-DU-PROJET.md) en entier avant toute
+modification : état de la mise en ligne, décisions structurantes, bugs
+déjà corrigés à ne pas réintroduire, et pièges de l'environnement.
+
 ## Architecture
 
 ```
