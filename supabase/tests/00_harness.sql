@@ -93,6 +93,7 @@ $$;
 create or replace function t.logout()
 returns void language plpgsql as $$
 begin
-  perform set_config('request.jwt.claims', '', false);
+  -- An empty object represents no identity; an empty string is not valid JSON.
+  perform set_config('request.jwt.claims', '{}', false);
 end;
 $$;
