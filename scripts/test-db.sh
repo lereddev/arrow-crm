@@ -34,3 +34,4 @@ done
 echo "→ tests de sécurité"
 "${PSQL[@]}" -d "$PGDATABASE" -f "$ROOT/supabase/tests/01_rls.sql"
 "${PSQL[@]}" -d "$PGDATABASE" -f "$ROOT/supabase/tests/02_explorer.sql"
+"${PSQL[@]}" -d "$PGDATABASE" -f "$ROOT/supabase/tests/03_legacy_lockdown.sql"
