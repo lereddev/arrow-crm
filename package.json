@@ -8,8 +8,9 @@
     "build": "node scripts/build.mjs",
     "dev": "npm run build && npx --yes serve app -l 5173",
     "import-leads": "node scripts/import-leads.mjs data.json",
+    "prepare-rdv-import": "node scripts/prepare-rdv-import.mjs",
     "lint": "node scripts/lint.mjs",
-    "test": "npm run test:import && node --test scripts/test-filters.test.mjs && npm run test:app && node scripts/test-explorer.mjs",
+    "test": "npm run test:import && node --test scripts/test-filters.test.mjs scripts/test-rdv-signals.test.mjs scripts/test-rdv-import.test.mjs && npm run test:app && node scripts/test-explorer.mjs",
     "test:import": "node --test scripts/test-import.test.mjs",
     "test:app": "node scripts/test-app.mjs",
     "test:db": "./scripts/test-db.sh"

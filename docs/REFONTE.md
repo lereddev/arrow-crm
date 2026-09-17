@@ -47,3 +47,22 @@ un backend simulé, jamais un compte production. Ils couvrent pagination, filtre
 notes distinctes, rafraîchissement, erreur d'enregistrement, suivi, agenda et mobile.
 Les tests SQL vérifient séparément les permissions réelles des rôles Postgres.
 Une validation navigateur simulée n'est pas une preuve d'écriture en production.
+
+## Historique RDV et qualification
+
+La migration `0006_rdv_history.sql` ajoute un historique de rendez-vous en lecture
+seule et des signaux multi-étiquettes. Les besoins (GMB, SEO, SEA, site internet,
+e-commerce, réseaux sociaux, avis) sont distincts des freins (budget, engagement
+ailleurs, timing, décideur absent). Une catégorie incertaine est affichée comme
+`À qualifier · peut-être …`; la note originale reste toujours visible.
+
+L'import ne place aucune donnée nominative dans Git. Un fichier CSV privé est
+chargé dans `rdv_import_staging`, table sans grant et sous RLS forcée. La fonction
+administrative `finalize_rdv_import()` vérifie tous les SIREN, remplit les tables
+finales dans la même transaction puis vide la zone tampon. L'application ne reçoit
+que `SELECT` sur les tables finales; `anon` ne reçoit aucun droit.
+
+Les onglets de l'agenda reprennent les territoires de la liste et ajoutent `Autres`.
+Ils n'affectent pas les droits: chaque utilisateur actif continue de lire tous les
+agendas, mais choisit une région pour travailler. L'onglet actif est conservé dans
+l'URL avec `agendaSector`.

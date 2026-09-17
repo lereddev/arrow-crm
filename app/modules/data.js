@@ -26,13 +26,17 @@ export async function request(query) {
   } finally { clearTimeout(timer); }
 }
 
-export const searchLeads = filters => request(client().rpc('search_leads_v2', filters));
-export const filterOptions = () => request(client().rpc('lead_filter_options_v2'));
+export const searchLeads = filters => request(client().rpc('search_leads_v3', filters));
+export const filterOptions = () => request(client().rpc('lead_filter_options_v3'));
 export const getLead = id => request(client().from('leads').select('*').eq('id', id).single());
 export const getIssues = id => request(client().from('lead_issues').select('issue_tel,issue_rdv').eq('lead_id', id).maybeSingle());
 export const getNotes = (id, page = 0) => request(client().from('lead_notes')
   .select('id,text,author_id,created_at,app_users(nom)').eq('lead_id', id)
   .order('created_at', { ascending: false }).order('id').range(page * 50, page * 50 + 49));
+export const getRdvHistory = (id, page = 0) => request(client().from('rdv_history')
+  .select('id,occurred_on,date_rdv_text,commercial,confirmation_rdv,issue_rdv,note_issue_rdv,source_period,rdv_signals(kind,label,confidence)')
+  .eq('lead_id', id).order('occurred_on', { ascending: false, nullsFirst: false })
+  .order('source_key', { ascending: false }).range(page * 50, page * 50 + 49));
 
 export async function saveNote(leadId, text, id) {
   const trimmed = text.trim();
@@ -56,9 +60,11 @@ export function saveIssues(leadId, tel, rdv) {
   }, { onConflict: 'lead_id' }));
 }
 
-export function getAgenda(page = 0, leadId = null) {
+export function getAgenda(page = 0, leadId = null, territory = null, excluded = []) {
   let query = client().from('agenda').select('*').order('date_rdv').order('id').range(page * 50, page * 50 + 49);
   if (leadId !== null) query = query.eq('lead_id', leadId);
+  if (territory?.length) query = query.in('departement', territory.map(String));
+  if (excluded.length) query = query.or(`departement.is.null,departement.not.in.(${excluded.join(',')})`);
   return request(query);
 }
 

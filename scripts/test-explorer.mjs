@@ -30,6 +30,7 @@ try {
   await page.locator('.company-link').first().waitFor();
   check('lead list is the authenticated home', await page.getByRole('heading', { name: 'Vos leads' }).isVisible());
   check('server pagination sends at most 50', fixture.requests.at(-1).p_limit === 50 && await page.locator('tbody tr').count() === 50);
+  check('historical issue note is visible from the list', await page.getByText(/Souhaite travailler sa fiche Google/).isVisible());
   await page.getByRole('button', { name: 'Avignon', exact: true }).click();
   await page.waitForFunction(() => document.querySelector('.result-count').textContent === '60 leads');
   check('Avignon groups all five departments', fixture.requests.at(-1).p_departments.join() === '84,13,30,34,26');
@@ -42,6 +43,8 @@ try {
   await page.locator('tbody tr').first().waitFor();
   await page.locator('.company-link').first().click();
   await page.locator('#newNote').waitFor();
+  await page.getByRole('heading', { name: 'Historique des rendez-vous' }).waitFor();
+  check('lead page shows full historical appointment note', await page.getByText(/budget est encore serré/).isVisible());
   check('lead has a shareable URL', new URL(page.url()).searchParams.get('lead') === '1');
   check('SIREN opens Societe.com', (await page.locator('.siren-link').getAttribute('href')).includes('societe.com/cgi-bin/search?champs=100000000'));
   await page.getByRole('button', { name: 'Enregistrer la note', exact: true }).click();
@@ -73,6 +76,7 @@ try {
   await page.locator('.appointment-small').waitFor();
   check('appointment is saved', fixture.agenda.length === 1);
   await page.getByRole('button', { name: 'Retour à la liste' }).click();
+  await page.getByText('Plus de filtres', { exact: true }).click();
   await page.locator('#tel').selectOption('À rappeler'); await page.locator('#rdv').selectOption('Signé');
   await page.waitForFunction(() => document.querySelector('.result-count').textContent === '1 lead');
   check('combined issue filters search backend', fixture.requests.at(-1).p_issue_tel === 'À rappeler' && fixture.requests.at(-1).p_issue_rdv === 'Signé');
@@ -102,6 +106,8 @@ try {
   check('detail fits mobile', await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   await page.getByRole('link', { name: 'Agenda', exact: true }).click();
   await page.locator('.agenda-card').waitFor();
+  await page.getByRole('button', { name: 'Avignon', exact: true }).click();
+  check('agenda region stays in the URL', new URL(page.url()).searchParams.get('agendaSector') === 'avignon');
   await page.getByRole('button', { name: 'Marquer terminé' }).click();
   await page.getByRole('button', { name: 'Réactiver' }).waitFor();
   check('agenda completion is reversible', fixture.agenda[0].disabled === true);

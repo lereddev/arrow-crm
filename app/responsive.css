@@ -3,6 +3,7 @@
   body .sidebar { width: 170px; padding: 24px 12px; }
   body #workspace { margin-left: 170px; padding: 30px 22px; }
   body .filter-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  body .extra-filters .filter-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   body .lead-table { font-size: 13px; }
 }
 @media (max-width: 800px) {
@@ -29,6 +30,7 @@
   body .lead-table td:first-child { grid-column: 1 / -1; font-size: 16px; }
   body .lead-table td:first-child::before { display: none; }
   body .lead-table td:last-child { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+  body .lead-table td:nth-child(4), body .lead-table td:nth-child(5) { grid-column: 1 / -1; }
   body .table-wrap { overflow: visible; }
 }
 @media (max-width: 520px) {
@@ -43,6 +45,7 @@
   body .territories { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
   body .territories button { font-size: 13px; padding: 9px 5px; }
   body .filter-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+  body .extra-filters .filter-grid { grid-template-columns: 1fr; }
   body .filter-disclosure > summary { display: list-item; margin-top: 8px; color: var(--accent); }
   body .search-wrap input { font-size: 16px; }
   body .filter-field > span { font-size: 12px; }
@@ -58,9 +61,13 @@
   body .panel { padding: 18px; }
   body .issue-fields { grid-template-columns: 1fr; }
   body .agenda-card { padding: 18px; gap: 12px; }
+  body .agenda-tabs { display: flex; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; }
+  body .agenda-tabs button { flex: 0 0 auto; }
   body .agenda-content { flex-basis: 100%; }
   body .auth-card { padding: 26px 22px; }
   body .auth-card h1 { font-size: 26px; }
   body .note-meta { display: block; }
   body .note-meta time { display: block; margin-top: 4px; }
+  body .history-heading { display: block; }
+  body .history-heading > .muted { display: block; margin-top: 8px; }
 }

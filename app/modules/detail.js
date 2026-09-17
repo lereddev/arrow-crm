@@ -2,6 +2,7 @@ import { el, button, icon, badge, phoneLink, selectField, loading, errorState, t
 import { getLead, getIssues, saveIssues, getNotes, saveNote } from './data.js';
 import { TEL_ISSUES, RDV_ISSUES } from './filters.js';
 import { appointmentForm, renderLeadAppointments } from './appointments.js';
+import { historyPanel } from './history.js';
 
 export async function renderDetail(root, id, navigate, current) {
   let disposed = false;
@@ -27,7 +28,8 @@ export async function renderDetail(root, id, navigate, current) {
   }
   const siren = el('a', { href: 'https://www.societe.com/cgi-bin/search?champs=' + encodeURIComponent(lead.siren), target: '_blank', rel: 'noopener noreferrer', class: 'siren-link' }, lead.siren, icon('external'));
   details.append(el('div', {}, el('dt', {}, 'SIREN · Société.com'), el('dd', {}, siren)));
-  const issues = el('section', { class: 'panel' }, el('h2', {}, 'Suivi de contact'), loading());
+  const issues = el('section', { class: 'panel' }, el('h2', {}, 'Suivi actuel'),
+    el('p', { class: 'muted section-intro' }, 'Issues saisies par l’équipe après les nouveaux appels et rendez-vous.'), loading());
   const notes = el('section', { class: 'panel notes-panel' }, el('h2', {}, 'Notes de l’équipe'),
     el('p', { class: 'muted' }, 'Chaque note est conservée séparément et partagée avec votre équipe.'));
   const textarea = el('textarea', { id: 'newNote', rows: '4', maxlength: '10000', placeholder: 'Compte rendu d’appel, besoin identifié, prochaine étape…' });
@@ -91,12 +93,15 @@ export async function renderDetail(root, id, navigate, current) {
   const appointments = el('section', { class: 'panel' }, el('h2', {}, 'Rendez-vous'));
   const appointmentList = el('div');
   appointments.append(appointmentList, appointmentForm(lead, () => renderLeadAppointments(appointmentList, lead.id, alive)));
+  const rdvHistory = historyPanel(lead.id, alive);
   root.replaceChildren(back, el('header', { class: 'detail-header' },
-    el('div', {}, el('h1', {}, lead.societe || 'Entreprise sans nom'), el('p', {}, lead.profession || '', ' · ', lead.ville || ''), badge(lead.priorite)), phoneLink(lead.telephone)),
-    el('div', { class: 'detail-layout' }, el('div', { class: 'detail-main' }, issues, notes, history),
+    el('div', {}, el('h1', {}, lead.societe || 'Entreprise sans nom'), el('p', {}, lead.profession || '', ' · ', lead.ville || ''),
+      el('span', { class: 'historical-priority' }, 'Priorité Arrow : ', badge(lead.priorite))), phoneLink(lead.telephone)),
+    el('div', { class: 'detail-layout' }, el('div', { class: 'detail-main' }, rdvHistory, issues, notes, history),
       el('aside', { class: 'detail-aside' }, el('section', { class: 'panel' }, el('h2', {}, 'Coordonnées'), el('p', {}, lead.telephone || 'Téléphone non renseigné'), details), appointments)));
   async function loadIssues() {
-    issues.replaceChildren(el('h2', {}, 'Suivi de contact'), loading());
+    issues.replaceChildren(el('h2', {}, 'Suivi actuel'),
+      el('p', { class: 'muted section-intro' }, 'Issues saisies par l’équipe après les nouveaux appels et rendez-vous.'), loading());
     try {
       const stored = await getIssues(id) || { issue_tel: '', issue_rdv: '' };
       if (!alive()) return;
@@ -117,7 +122,8 @@ export async function renderDetail(root, id, navigate, current) {
         } catch { error.textContent = 'Le suivi n’a pas pu être confirmé. Réessayez.'; }
         finally { save.disabled = false; save.textContent = 'Enregistrer le suivi'; selects.forEach(node => { node.disabled = false; }); }
       });
-      issues.replaceChildren(el('h2', {}, 'Suivi de contact'), issueForm);
+      issues.replaceChildren(el('h2', {}, 'Suivi actuel'),
+        el('p', { class: 'muted section-intro' }, 'Issues saisies par l’équipe après les nouveaux appels et rendez-vous.'), issueForm);
     } catch { if (alive()) issues.replaceChildren(errorState('Le suivi ne peut pas être chargé.', loadIssues)); }
   }
   loadIssues(); loadNotes(); renderLeadAppointments(appointmentList, lead.id, alive);

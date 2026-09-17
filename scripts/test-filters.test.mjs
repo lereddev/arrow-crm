@@ -3,11 +3,12 @@ import assert from 'node:assert/strict';
 import { readFilters, filterParams, rpcFilters } from '../app/modules/filters.js';
 
 test('territories use all requested departments and server pagination', () => {
-  const filters = rpcFilters(readFilters('?sector=avignon&page=2&tel=À+rappeler'));
+  const filters = rpcFilters(readFilters('?sector=avignon&page=2&tel=À+rappeler&need=GMB&blocker=Budget'));
   assert.deepEqual(filters.p_departments, [84,13,30,34,26]);
   assert.equal(filters.p_offset, 50);
   assert.equal(filters.p_limit, 50);
   assert.equal(filters.p_issue_tel, 'À rappeler');
+  assert.equal(filters.p_need, 'GMB'); assert.equal(filters.p_blocker, 'Budget');
 });
 test('filters survive URL round trip including accents', () => {
   const state = readFilters('?sector=reunion&rdv=__empty&q=électricité&profession=Plombier');
@@ -26,4 +27,13 @@ test('unset issues are distinct from no filter', () => {
 test('department and sector intersect rather than silently overriding each other', () => {
   const rpc = rpcFilters(readFilters('?sector=alpes&dept=06'));
   assert.deepEqual(rpc.p_departments, [6,83,4]); assert.equal(rpc.p_departement, 6);
+});
+test('other territory excludes every named region', () => {
+  const rpc = rpcFilters(readFilters('?sector=other'));
+  assert.equal(rpc.p_departments, null);
+  assert.deepEqual(rpc.p_excluded_departments, [84,13,30,34,26,20,974,69,1,38,42,6,83,4]);
+});
+test('invalid need and blocker values are ignored', () => {
+  const state = readFilters('?need=Invented&blocker=Unknown&historyRdv=Bad');
+  assert.equal(state.need, ''); assert.equal(state.blocker, ''); assert.equal(state.historyRdv, '');
 });

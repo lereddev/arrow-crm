@@ -94,7 +94,7 @@ Trois suites, exécutables séparément :
 npm run test:db      # 53 tests des règles d'accès, sur un Postgres local
 npm run test:import  # 11 tests de la transformation des leads
 npm run test:app     # 11 tests navigateur, page servie avec sa CSP réelle
-npm test             # les deux dernières (test:db exige un Postgres)
+npm test             # logique métier et parcours navigateur (test:db exige Postgres)
 ```
 
 `test:db` repart d'une base vide à chaque exécution et rejoue les
@@ -109,6 +109,13 @@ requête.
 avec des en-têtes de test : le jour où la CSP de production diverge,
 la suite échoue. Il exige un Chromium (`npx playwright install
 chromium`, ou `CHROME_PATH` vers un binaire existant).
+
+### Historique des rendez-vous
+
+`rdv_history` et `rdv_signals` sont des données de référence en lecture seule.
+Elles ont RLS activé et forcé, aucune policy d'écriture et aucun droit pour `anon`.
+La table temporaire `rdv_import_staging` n'a aucun grant applicatif ni policy: seul
+un administrateur de base peut y charger l'import privé et lancer sa finalisation.
 
 ## Dette connue
 

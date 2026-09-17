@@ -1,6 +1,7 @@
 import { el, button, icon, badge, phoneLink, selectField, loading, errorState, fmt } from './ui.js';
 import { searchLeads, filterOptions } from './data.js';
-import { TERRITORIES, PRIORITIES, TEL_ISSUES, RDV_ISSUES, SORTS, FILTER_LABELS, PAGE_SIZE, readFilters, filterParams, rpcFilters } from './filters.js';
+import { TERRITORIES, PRIORITIES, TEL_ISSUES, RDV_ISSUES, NEEDS, BLOCKERS, SORTS, FILTER_LABELS, PAGE_SIZE, readFilters, filterParams, rpcFilters } from './filters.js';
+import { signalGroups } from './history.js';
 
 export async function renderLeads(root, navigate, current) {
   document.title = 'Leads | Arrow';
@@ -17,7 +18,7 @@ export async function renderLeads(root, navigate, current) {
   const secondary = el('details', { class: 'extra-filters' }, el('summary', {}, 'Plus de filtres'));
   const extraControls = el('div', { class: 'filter-grid' });
   secondary.append(extraControls);
-  secondary.open = Boolean(state.dept || state.status);
+  secondary.open = Boolean(state.dept || state.status || state.priority || state.tel || state.rdv);
   const filterDisclosure = el('details', { class: 'filter-disclosure' }, el('summary', {}, 'Affiner la recherche'), controls, secondary, chips);
   const mobile = matchMedia('(max-width: 520px)');
   const adaptFilters = () => { filterDisclosure.open = !mobile.matches; };
@@ -64,7 +65,8 @@ export async function renderLeads(root, navigate, current) {
     label.querySelector('select').dataset.filter = key;
     return label;
   }
-  controls.append(field('Issue téléphone', 'tel', TEL_ISSUES, true), field('Issue RDV', 'rdv', RDV_ISSUES, true), field('Priorité', 'priority', PRIORITIES));
+  controls.append(field('Besoin identifié', 'need', NEEDS), field('Frein identifié', 'blocker', BLOCKERS),
+    field('Issue du RDV historique', 'historyRdv', RDV_ISSUES, true));
   const optionsStatus = el('span', { class: 'help', role: 'status' }, 'Chargement des métiers et commerciaux…');
   controls.append(optionsStatus);
   const resetButton = button('Réinitialiser', reset, 'text-button'); resetButton.prepend(icon('reset'));
@@ -78,7 +80,9 @@ export async function renderLeads(root, navigate, current) {
       optionsStatus.remove();
       controls.insertBefore(field('Métier', 'profession', values('profession')), resetButton);
       controls.insertBefore(field('Commercial', 'commercial', values('commercial')), resetButton);
-      extraControls.replaceChildren(field('Département', 'dept', options.departement || []), field('Statut importé Arrow', 'status', options.statut || []));
+      extraControls.replaceChildren(field('Issue téléphone actuelle', 'tel', TEL_ISSUES, true),
+        field('Issue RDV actuelle', 'rdv', RDV_ISSUES, true), field('Priorité historique Arrow', 'priority', PRIORITIES),
+        field('Département', 'dept', options.departement || []), field('Statut importé Arrow', 'status', options.statut || []));
     } catch {
       if (alive()) optionsStatus.replaceChildren(button('Réessayer les filtres métier / commercial', loadOptions, 'text-button'));
     }
@@ -89,13 +93,20 @@ export async function renderLeads(root, navigate, current) {
     const link = el('a', { href: '?' + params, class: 'company-link', onclick: event => {
       if (!event.metaKey && !event.ctrlKey) { event.preventDefault(); openLead(lead.id); }
     } }, lead.societe || 'Entreprise sans nom');
+    const historical = el('div', { class: 'historical-summary' },
+      el('div', { class: 'historical-meta' }, badge(lead.historical_issue),
+        el('span', { class: 'cell-sub' }, lead.historical_date
+          ? new Date(`${lead.historical_date}T12:00:00`).toLocaleDateString('fr-FR') : lead.historical_date_text || 'Date non renseignée')),
+      el('p', { class: 'history-excerpt' }, lead.historical_note || 'Aucune note d’issue RDV retrouvée.'));
     return el('tr', {},
       el('td', { 'data-label': 'Entreprise' }, link, el('span', { class: 'cell-sub' }, [lead.ville, lead.departement].filter(value => value != null && value !== '').join(' · '))),
-      el('td', { 'data-label': 'Métier' }, lead.profession || 'Non renseigné', el('span', { class: 'cell-sub' }, lead.commercial || 'Sans commercial')),
-      el('td', { 'data-label': 'Téléphone' }, el('span', { class: 'phone-number' }, lead.telephone || 'Non renseigné'), phoneLink(lead.telephone)),
-      el('td', { 'data-label': 'Priorité' }, badge(lead.priorite)),
-      el('td', { 'data-label': 'Issue téléphone' }, badge(lead.issue_tel)),
-      el('td', { 'data-label': 'Issue RDV' }, badge(lead.issue_rdv)),
+      el('td', { 'data-label': 'Contact' }, el('span', {}, lead.profession || 'Métier non renseigné'),
+        el('span', { class: 'cell-sub' }, lead.commercial || 'Sans commercial'),
+        el('span', { class: 'phone-number' }, lead.telephone || 'Téléphone non renseigné'), phoneLink(lead.telephone)),
+      el('td', { 'data-label': 'Suivi actuel' }, el('span', { class: 'mini-label' }, 'Tél.'), badge(lead.issue_tel),
+        el('span', { class: 'mini-label second' }, 'RDV'), badge(lead.issue_rdv)),
+      el('td', { 'data-label': 'Dernière issue RDV' }, historical),
+      el('td', { 'data-label': 'Besoins et freins' }, signalGroups(lead.needs || [], lead.blockers || [])),
       el('td', { 'data-label': 'Notes' }, el('span', { class: 'muted' }, fmt(lead.note_count || 0)),
         el('button', { type: 'button', class: 'open-lead', 'aria-label': 'Ouvrir ' + (lead.societe || 'la fiche'), onclick: () => openLead(lead.id) }, icon('arrow'))));
   }
@@ -118,7 +129,7 @@ export async function renderLeads(root, navigate, current) {
         return;
       }
       const table = el('table', { class: 'lead-table' }, el('caption', { class: 'sr-only' }, 'Leads correspondant aux filtres'),
-        el('thead', {}, el('tr', {}, ['Entreprise', 'Métier / Commercial', 'Téléphone', 'Priorité', 'Issue téléphone', 'Issue RDV', 'Notes'].map(title => el('th', { scope: 'col' }, title)))),
+        el('thead', {}, el('tr', {}, ['Entreprise', 'Contact', 'Suivi actuel', 'Dernière issue RDV', 'Besoins / freins', 'Notes'].map(title => el('th', { scope: 'col' }, title)))),
         el('tbody', {}, data.rows.map(row)));
       const prev = button('Précédent', () => { state.page--; load(); }); prev.disabled = state.page <= 1;
       const next = button('Suivant', () => { state.page++; load(); }); next.disabled = state.page >= pages;
