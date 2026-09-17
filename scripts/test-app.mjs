@@ -108,8 +108,7 @@ check('le mot de passe est masqué',
   (await page.locator('#authPassword').getAttribute('type')) === 'password');
 
 check('les librairies embarquées sont chargées',
-  await page.evaluate(() => typeof window.Chart !== 'undefined'
-                         && typeof window.supabase !== 'undefined'));
+  await page.evaluate(() => typeof window.supabase !== 'undefined'));
 check('la configuration est exposée à la page',
   await page.evaluate(() => Boolean(window.ARROW_CONFIG && window.ARROW_CONFIG.supabaseUrl)));
 

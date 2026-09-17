@@ -62,9 +62,7 @@ console.log('app/config.js généré.');
 const bundles = [
   { name: 'supabase.js',
     entry: "import { createClient } from '@supabase/supabase-js';\n"
-         + 'window.supabase = { createClient };\n' },
-  { name: 'chart.js',
-    entry: "import Chart from 'chart.js/auto';\nwindow.Chart = Chart;\n" }
+         + 'window.supabase = { createClient };\n' }
 ];
 
 for (const b of bundles) {

@@ -1,0 +1,114 @@
+import assert from 'node:assert/strict';
+import { createServer } from 'node:http';
+import { readFile } from 'node:fs/promises';
+import { join, extname, resolve } from 'node:path';
+import { chromium } from 'playwright';
+import { mockApi } from './explorer-fixture.mjs';
+
+const root = resolve(import.meta.dirname, '..');
+const app = join(root, 'app');
+const config = JSON.parse(await readFile(join(root, 'vercel.json'), 'utf8'));
+const headers = Object.fromEntries(config.headers[0].headers.map(header => [header.key, header.value]));
+const server = createServer(async (req, res) => {
+  const path = resolve(app, '.' + new URL(req.url, 'http://localhost').pathname.replace(/\/$/, '/index.html'));
+  if (!path.startsWith(app + '/')) { res.writeHead(403); res.end(); return; }
+  try {
+    res.writeHead(200, { ...headers, 'Content-Type': ({ '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' })[extname(path)] || 'text/plain' });
+    res.end(await readFile(path));
+  } catch { res.end(); }
+});
+await new Promise(resolve => server.listen(5201, '127.0.0.1', resolve));
+const browser = await chromium.launch();
+let checks = 0;
+function check(label, value) { assert.ok(value, label); checks++; console.log(' OK  ' + label); }
+try {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  const fixture = await mockApi(context);
+  const page = await context.newPage();
+  const errors = []; page.on('pageerror', error => errors.push(error.message));
+  await page.goto('http://127.0.0.1:5201/');
+  await page.locator('.company-link').first().waitFor();
+  check('lead list is the authenticated home', await page.getByRole('heading', { name: 'Vos leads' }).isVisible());
+  check('server pagination sends at most 50', fixture.requests.at(-1).p_limit === 50 && await page.locator('tbody tr').count() === 50);
+  await page.getByRole('button', { name: 'Avignon', exact: true }).click();
+  await page.waitForFunction(() => document.querySelector('.result-count').textContent === '60 leads');
+  check('Avignon groups all five departments', fixture.requests.at(-1).p_departments.join() === '84,13,30,34,26');
+  await page.getByRole('button', { name: 'Suivant', exact: true }).click();
+  await page.waitForFunction(() => document.querySelectorAll('tbody tr').length === 10);
+  check('pagination fetches next page in database', fixture.requests.at(-1).p_offset === 50);
+  await page.reload(); await page.locator('.company-link').first().waitFor();
+  check('refresh preserves sector and page', fixture.requests.at(-1).p_offset === 50 && fixture.requests.at(-1).p_departments.length === 5);
+  await page.getByRole('button', { name: 'Réinitialiser', exact: true }).click();
+  await page.locator('tbody tr').first().waitFor();
+  await page.locator('.company-link').first().click();
+  await page.locator('#newNote').waitFor();
+  check('lead has a shareable URL', new URL(page.url()).searchParams.get('lead') === '1');
+  check('SIREN opens Societe.com', (await page.locator('.siren-link').getAttribute('href')).includes('societe.com/cgi-bin/search?champs=100000000'));
+  await page.getByRole('button', { name: 'Enregistrer la note', exact: true }).click();
+  check('empty note rejected', await page.getByText('Saisissez une note avant de l’enregistrer.').isVisible());
+  await page.locator('#newNote').fill('Première note de test');
+  await page.getByRole('button', { name: 'Enregistrer la note', exact: true }).click();
+  await page.locator('.note').waitFor();
+  await page.locator('#newNote').fill('Seconde note <img src=x onerror=alert(1)>');
+  await page.getByRole('button', { name: 'Enregistrer la note', exact: true }).click();
+  await page.waitForFunction(() => document.querySelectorAll('.note').length === 2);
+  check('notes are separate and text is safely rendered', await page.locator('.note img').count() === 0 && fixture.notes.length === 2);
+  await page.reload(); await page.locator('.note').first().waitFor();
+  check('saved notes are loaded again after refresh', await page.locator('.note').count() === 2);
+  fixture.failNotes = true;
+  await page.locator('#newNote').fill('Texte à conserver en cas d’erreur');
+  await page.getByRole('button', { name: 'Enregistrer la note', exact: true }).click();
+  await page.getByText(/Enregistrement non confirmé/).waitFor();
+  check('failed save retains the text', await page.locator('#newNote').inputValue() === 'Texte à conserver en cas d’erreur');
+  fixture.failNotes = false;
+  await page.getByRole('button', { name: 'Enregistrer la note', exact: true }).click();
+  await page.waitForFunction(() => document.querySelectorAll('.note').length === 3);
+  await page.locator('#issueTel').selectOption('À rappeler');
+  await page.locator('#issueRdv').selectOption('Signé');
+  await page.getByRole('button', { name: 'Enregistrer le suivi' }).click();
+  await page.waitForFunction(() => document.querySelector('#issueTel').disabled === false && !document.querySelector('form[data-dirty="true"]'));
+  check('issues saved to backend', fixture.issues[1].issue_tel === 'À rappeler' && fixture.issues[1].issue_rdv === 'Signé');
+  await page.locator('#rdvDate').fill('2026-10-12'); await page.locator('#rdvTime').fill('14:00');
+  await page.getByRole('button', { name: 'Planifier le rendez-vous' }).click();
+  await page.locator('.appointment-small').waitFor();
+  check('appointment is saved', fixture.agenda.length === 1);
+  await page.getByRole('button', { name: 'Retour à la liste' }).click();
+  await page.locator('#tel').selectOption('À rappeler'); await page.locator('#rdv').selectOption('Signé');
+  await page.waitForFunction(() => document.querySelector('.result-count').textContent === '1 lead');
+  check('combined issue filters search backend', fixture.requests.at(-1).p_issue_tel === 'À rappeler' && fixture.requests.at(-1).p_issue_rdv === 'Signé');
+  await page.locator('#leadSearch').fill('NoMatch');
+  await page.getByText('Aucun lead avec ces filtres').waitFor();
+  check('empty state offers a recovery action', await page.getByRole('button', { name: 'Voir tous les leads' }).isVisible());
+  await page.getByRole('button', { name: 'Voir tous les leads' }).click();
+  await page.locator('.company-link').first().waitFor();
+  fixture.failSearch = true;
+  await page.getByRole('button', { name: 'Corse', exact: true }).click();
+  await page.getByRole('button', { name: 'Réessayer', exact: true }).waitFor();
+  fixture.failSearch = false;
+  await page.getByRole('button', { name: 'Réessayer', exact: true }).click();
+  await page.locator('.company-link').first().waitFor();
+  check('retry recovers after network failure', await page.locator('tbody tr').count() === 1);
+  await page.getByRole('button', { name: 'Avignon', exact: true }).click();
+  await page.locator('.company-link').first().waitFor();
+  await page.screenshot({ path: '/tmp/arrow-explorer-desktop.png', fullPage: false });
+  for (const width of [375,768,1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    check('no horizontal page overflow at ' + width, await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    if (width === 375) await page.screenshot({ path: '/tmp/arrow-explorer-mobile.png', fullPage: false });
+  }
+  await page.locator('.company-link').first().click(); await page.locator('.note').first().waitFor();
+  await page.screenshot({ path: '/tmp/arrow-detail-desktop.png', fullPage: false });
+  await page.setViewportSize({ width: 375, height: 900 });
+  check('detail fits mobile', await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  await page.getByRole('link', { name: 'Agenda', exact: true }).click();
+  await page.locator('.agenda-card').waitFor();
+  await page.getByRole('button', { name: 'Marquer terminé' }).click();
+  await page.getByRole('button', { name: 'Réactiver' }).waitFor();
+  check('agenda completion is reversible', fixture.agenda[0].disabled === true);
+  await page.getByRole('button', { name: 'Réactiver' }).click();
+  await page.getByRole('button', { name: 'Marquer terminé' }).waitFor();
+  check('agenda reactivation persists', fixture.agenda[0].disabled === false);
+  check('no JavaScript errors in authenticated journey', errors.length === 0);
+  await context.close();
+  console.log(`${checks} contrôles du parcours commercial réussis (données simulées).`);
+} finally { await browser.close(); server.close(); }

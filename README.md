@@ -38,17 +38,18 @@ Points structurants :
 
 - **Les leads ne quittent jamais la base en bloc.** Chaque onglet
   demande une page de 50 lignes, filtrée et triée en SQL
-  (`search_leads`). Un fichier de prospection servi en statique serait
+  (`search_leads_v2`). Un fichier de prospection servi en statique serait
   téléchargeable par n'importe qui connaissant son URL.
-- **Le tableau de bord lit des agrégats calculés en base**, pas des
-  chiffres figés dans la page.
-- **Aucune dépendance chargée à l'exécution depuis un CDN.** Supabase
-  et Chart.js sont regroupés au build et servis depuis le même domaine.
-- **Une librairie absente dégrade, elle ne casse pas.** Sans Chart.js,
-  les graphiques affichent un message et l'application fonctionne.
+- **La liste des leads est l'accueil.** Secteurs et issues téléphone/RDV
+  se combinent en base. Les filtres et la pagination restent dans l'URL.
+- **Le SDK Supabase est embarqué au build.** Chart.js n'est plus chargé.
+  La police DM Sans est servie par Google Fonts avec une police de secours.
 - **Aucun script inline, aucun attribut `onclick`.** Les événements
-  passent par un écouteur unique et délégué, ce qui permet une CSP en
-  `script-src 'self'`.
+  utilisent `addEventListener`, ce qui permet une CSP en `script-src 'self'`.
+  Les données sont affichées avec des noeuds texte, sans `innerHTML`.
+
+La refonte du 17 septembre est décrite dans [docs/REFONTE.md](docs/REFONTE.md).
+Ce complément remplace les descriptions de l'ancien écran dans le document de passation.
 
 ## Démarrer en local
 
@@ -69,7 +70,8 @@ npm run test:import  # transformation des leads
 npm run test:app     # navigateur, page servie avec sa CSP réelle
 ```
 
-78 tests au total. `test:db` demande un Postgres 16 local, `test:app`
+`npm test` inclut les filtres et le parcours commercial connecté sur données simulées.
+`test:db` demande un Postgres 16 local, `test:app`
 un Chromium (`npx playwright install chromium`).
 
 ## Importer les leads

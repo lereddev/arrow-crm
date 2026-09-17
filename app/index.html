@@ -1,438 +1,56 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Arrow CRM Prospection</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="vendor/chart.js"></script>
-<script src="vendor/supabase.js"></script>
-<script src="config.js"></script>
-<link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f7f9">
+  <title>Arrow | Prospection</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="vendor/supabase.js" defer></script>
+  <script src="config.js" defer></script>
+  <script type="module" src="app.js"></script>
 </head>
 <body>
-<!-- ═══ PORTE D'ENTRÉE : session et connexion ═══ -->
-<div class="auth-gate" id="authGate">
-  <div class="auth-card">
-    <div class="auth-brand">
-      <div class="brand-logo">A</div>
-      <div><span class="brand-text">Arrow</span><span class="brand-sub"> CRM Prospection</span></div>
-    </div>
-
-    <div class="auth-state" id="authLoading">
-      <div class="auth-spinner" aria-hidden="true"></div>
-      <p class="auth-lead">Vérification de votre session…</p>
-    </div>
-
-    <form novalidate class="auth-state" id="authLogin" style="display:none">
-      <h1 class="auth-title">Connexion</h1>
-      <p class="auth-lead">Identifiants fournis par la direction d’agence.</p>
-      <label class="auth-label" for="authEmail">Adresse email</label>
-      <input class="auth-input" id="authEmail" name="email" type="email"
-             autocomplete="username" inputmode="email" spellcheck="false" required
-             placeholder="prenom.nom@exemple.fr">
-      <label class="auth-label" for="authPassword">Mot de passe</label>
-      <input class="auth-input" id="authPassword" name="password" type="password"
-             autocomplete="current-password" required>
-      <p class="auth-error" id="authError" role="alert"></p>
-      <button class="auth-btn" id="authSubmit" type="submit">Se connecter</button>
-      <p class="auth-foot">Mot de passe oublié : contactez votre directeur d’agence, il le
-         réinitialise en quelques secondes.</p>
-    </form>
-
-    <div class="auth-state" id="authFatal" style="display:none">
-      <div class="auth-icon">⚠️</div>
-      <h1 class="auth-title">Accès impossible</h1>
-      <p class="auth-lead" id="authFatalText"></p>
-    </div>
+  <a class="skip-link" href="#workspace">Aller au contenu</a>
+  <div id="authGate" class="auth-gate">
+    <section class="auth-card" aria-label="Connexion Arrow">
+      <div class="brand"><span class="brand-mark">A</span> Arrow</div>
+      <div id="authLoading" role="status"><p>Vérification de votre session…</p></div>
+      <form id="authLogin" novalidate hidden>
+        <h1>Votre prochaine<br>conversation commence ici.</h1>
+        <p class="muted">Connectez-vous pour retrouver vos leads et le suivi de votre équipe.</p>
+        <label for="authEmail">Adresse email</label>
+        <input id="authEmail" name="email" type="email" autocomplete="username" inputmode="email" required>
+        <label for="authPassword">Mot de passe</label>
+        <input id="authPassword" name="password" type="password" autocomplete="current-password" required>
+        <p id="authError" class="error-text" role="alert"></p>
+        <button id="authSubmit" class="primary" type="submit">Se connecter</button>
+        <p class="help">Identifiants ou mot de passe oublié ? Contactez votre direction.</p>
+      </form>
+      <div id="authFatal" hidden><h1>Accès impossible</h1><p id="authFatalText"></p>
+        <button id="authRetry" type="button">Réessayer</button>
+        <button id="authLogout" type="button">Changer de compte</button>
+      </div>
+    </section>
   </div>
-</div>
-
-<div class="toast" id="toast" role="status" aria-live="polite"></div>
-
-<div id="appRoot" style="display:none">
-
-<!-- HEADER -->
-<header>
-  <div class="header-inner">
-    <a class="brand" href="#">
-      <div class="brand-logo">A</div>
-      <div>
-        <span class="brand-text">Arrow</span>
-        <span class="brand-sub"> CRM Prospection</span>
+  <div id="appRoot" hidden>
+    <aside class="sidebar">
+      <a class="brand" href="?" aria-label="Arrow, les leads"><span class="brand-mark">A</span> Arrow</a>
+      <span class="sidebar-caption">PROSPECTION</span>
+      <nav id="mainNav" aria-label="Navigation principale">
+        <a href="?" data-view="leads">Leads</a>
+        <a href="?view=agenda" data-view="agenda">Agenda</a>
+      </nav>
+      <div class="session-box"><span class="avatar" aria-hidden="true">A</span>
+        <span id="sessionUser"></span><button id="signOut" class="text-button" type="button">Déconnexion</button>
       </div>
-    </a>
-    <nav id="mainNav">
-      <button class="tab-btn active" data-tab="dashboard">
-        Tableau de bord
-      </button>
-      <button class="tab-btn" data-tab="chaud">
-        Chauds 🔥 <span class="tab-badge" id="badge-chaud">1 985</span>
-      </button>
-      <button class="tab-btn" data-tab="tiede">
-        Tièdes ⭐ <span class="tab-badge" id="badge-tiede">9 418</span>
-      </button>
-      <button class="tab-btn" data-tab="froid">
-        Froids ❄️ <span class="tab-badge" id="badge-froid">1 563</span>
-      </button>
-      <button class="tab-btn" data-tab="client">
-        Clients 🔄 <span class="tab-badge" id="badge-client">1 041</span>
-      </button>
-      <button class="tab-btn" data-tab="exclu">
-        Exclus 🚫 <span class="tab-badge" id="badge-exclu">21</span>
-      </button>
-      <button class="tab-btn" data-tab="agenda">
-        Agenda 📅 <span class="tab-badge" id="badge-agenda"></span>
-      </button>
-    </nav>
-    <div class="session-box">
-      <span class="session-user" id="sessionUser"></span>
-      <button class="session-out" type="button" data-act="signout">Déconnexion</button>
-    </div>
+    </aside>
+    <main id="workspace" tabindex="-1"></main>
   </div>
-</header>
-
-<!-- MAIN -->
-<main>
-
-  <!-- ═══ DASHBOARD TAB ═══ -->
-  <div class="tab-content active" id="tab-dashboard">
-
-    <!-- KPI TOTAL -->
-    <div class="kpi-total">
-      <span>Total leads dans la base</span>
-      <span>14 028</span>
-    </div>
-
-    <!-- KPI CARDS -->
-    <div class="kpi-grid">
-      <div class="kpi-card hot glass" data-act="tab" data-tab="chaud" title="Voir les chauds">
-        <div class="kpi-label">🔥 Chauds</div>
-        <div class="kpi-value">1 985</div>
-        <div class="kpi-pct">14,2% du total</div>
-      </div>
-      <div class="kpi-card warm glass" data-act="tab" data-tab="tiede" title="Voir les tièdes">
-        <div class="kpi-label">⭐ Tièdes</div>
-        <div class="kpi-value">9 418</div>
-        <div class="kpi-pct">67,1% du total</div>
-      </div>
-      <div class="kpi-card cold glass" data-act="tab" data-tab="froid" title="Voir les froids">
-        <div class="kpi-label">❄️ Froids</div>
-        <div class="kpi-value">1 563</div>
-        <div class="kpi-pct">11,1% du total</div>
-      </div>
-      <div class="kpi-card client glass" data-act="tab" data-tab="client" title="Voir les clients">
-        <div class="kpi-label">🔄 Clients</div>
-        <div class="kpi-value">1 041</div>
-        <div class="kpi-pct">7,4% du total</div>
-      </div>
-      <div class="kpi-card exclu glass" data-act="tab" data-tab="exclu" title="Voir les exclus">
-        <div class="kpi-label">🚫 Exclus</div>
-        <div class="kpi-value">21</div>
-        <div class="kpi-pct">0,1% du total</div>
-      </div>
-    </div>
-
-    <!-- CHARTS GRID -->
-    <div class="charts-grid">
-
-      <!-- DONUT CHART -->
-      <div class="chart-card">
-        <div class="chart-title">Répartition des leads</div>
-        <div class="donut-wrap">
-          <div class="donut-canvas-wrap">
-            <canvas id="donutChart" width="200" height="200"></canvas>
-            <div class="donut-center">
-              <div class="donut-center-val">14 028</div>
-              <div class="donut-center-lbl">leads</div>
-            </div>
-          </div>
-          <div class="donut-legend">
-            <div class="legend-item">
-              <div class="legend-dot" style="background:#ff6b35"></div>
-              <span class="legend-name">🔥 Chauds</span>
-              <span class="legend-val">1 985</span>
-              <span class="legend-pct">14,2%</span>
-            </div>
-            <div class="legend-item">
-              <div class="legend-dot" style="background:#f59e0b"></div>
-              <span class="legend-name">⭐ Tièdes</span>
-              <span class="legend-val">9 418</span>
-              <span class="legend-pct">67,1%</span>
-            </div>
-            <div class="legend-item">
-              <div class="legend-dot" style="background:#60a5fa"></div>
-              <span class="legend-name">❄️ Froids</span>
-              <span class="legend-val">1 563</span>
-              <span class="legend-pct">11,1%</span>
-            </div>
-            <div class="legend-item">
-              <div class="legend-dot" style="background:#10b981"></div>
-              <span class="legend-name">🔄 Clients</span>
-              <span class="legend-val">1 041</span>
-              <span class="legend-pct">7,4%</span>
-            </div>
-            <div class="legend-item">
-              <div class="legend-dot" style="background:#6b7280"></div>
-              <span class="legend-name">🚫 Exclus</span>
-              <span class="legend-val">21</span>
-              <span class="legend-pct">0,1%</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- RIGHT CHARTS -->
-      <div class="charts-right">
-
-        <!-- TOP DEPTS BAR -->
-        <div class="chart-card">
-          <div class="chart-title">Top 10 départements</div>
-          <div class="chart-canvas-wrap"><canvas id="deptChart"></canvas></div>
-        </div>
-
-        <!-- TOP PROFESSIONS HORIZONTAL BAR -->
-        <div class="chart-card">
-          <div class="chart-title">Top 10 professions</div>
-          <div class="chart-canvas-wrap"><canvas id="profChart"></canvas></div>
-        </div>
-
-      </div>
-    </div>
-
-    <!-- DEPT + PROFESSIONS DETAIL TABLES -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:28px;" class="detail-tables-grid">
-
-      <div class="stats-table-wrap">
-        <div class="stats-table-title">Départements — Détail</div>
-        <table class="stats-table">
-          <thead>
-            <tr>
-              <th>Dépt</th>
-              <th>Leads</th>
-              <th>% Chauds</th>
-              <th style="min-width:80px"></th>
-            </tr>
-          </thead>
-          <tbody id="deptTableBody"></tbody>
-        </table>
-      </div>
-
-      <div class="stats-table-wrap">
-        <div class="stats-table-title">Professions — Détail</div>
-        <table class="stats-table">
-          <thead>
-            <tr>
-              <th>Profession</th>
-              <th>Leads</th>
-              <th>% Chauds</th>
-              <th style="min-width:80px"></th>
-            </tr>
-          </thead>
-          <tbody id="profTableBody"></tbody>
-        </table>
-      </div>
-
-    </div>
-
-  </div><!-- /tab-dashboard -->
-
-  <!-- ═══ LEAD TABS ═══ -->
-  <div class="tab-content" id="tab-chaud">
-    <div id="content-chaud"></div>
-  </div>
-  <div class="tab-content" id="tab-tiede">
-    <div id="content-tiede"></div>
-  </div>
-  <div class="tab-content" id="tab-froid">
-    <div id="content-froid"></div>
-  </div>
-  <div class="tab-content" id="tab-client">
-    <div id="content-client"></div>
-  </div>
-  <div class="tab-content" id="tab-exclu">
-    <div id="content-exclu"></div>
-  </div>
-
-  <div class="tab-content" id="tab-agenda">
-    <div class="lead-tab-header">
-      <div class="tab-title">📅 Agenda</div>
-    </div>
-    <div id="content-agenda"></div>
-  </div>
-
-</main>
-</div>
-
-<!-- LEAD PAGE OVERLAY -->
-<div id="leadPage" class="lead-page-overlay">
-  <div class="lp-header-bar">
-    <button class="lp-back-btn" data-act="lead-close">← Retour</button>
-    <div class="lp-title-area">
-      <span class="lp-company" id="lpCompany"></span>
-      <span id="lpBadge"></span>
-    </div>
-    <a class="btn-primary" id="lpCallBtn" href="#" style="flex-shrink:0;white-space:nowrap">📞 Appeler</a>
-  </div>
-  <div class="lp-body">
-
-    <!-- Info grid -->
-    <div class="lp-info-grid">
-      <div class="lp-section">
-        <div class="lp-section-title">Coordonnées & localisation</div>
-        <div class="modal-field">
-          <span class="field-label">Téléphone</span>
-          <span class="field-value" id="lpTel">—</span>
-        </div>
-        <div class="modal-field">
-          <span class="field-label">Adresse</span>
-          <span class="field-value" id="lpAdresse">—</span>
-        </div>
-        <div class="modal-field">
-          <span class="field-label">SIREN</span>
-          <span class="field-value" id="lpSiren">—</span>
-        </div>
-        <div class="modal-field">
-          <span class="field-label">Profession</span>
-          <span class="field-value" id="lpProfession">—</span>
-        </div>
-        <div class="modal-field">
-          <span class="field-label">Département</span>
-          <span class="field-value" id="lpDept">—</span>
-        </div>
-        <div class="modal-field">
-          <span class="field-label">Ville</span>
-          <span class="field-value" id="lpVille">—</span>
-        </div>
-        <div class="modal-field" id="lpLienArrowWrap" style="display:none">
-          <span class="field-label">Lien Arrow</span>
-          <span class="field-value" id="lpLienArrow">—</span>
-        </div>
-      </div>
-      <div class="lp-section">
-        <div class="lp-section-title">Suivi commercial</div>
-        <div class="modal-field">
-          <span class="field-label">Statut téléphone</span>
-          <span class="field-value" id="lpStatutTel">—</span>
-        </div>
-        <div class="modal-field">
-          <span class="field-label">Statut RDV</span>
-          <span class="field-value" id="lpStatutRdv">—</span>
-        </div>
-        <div class="modal-field">
-          <span class="field-label">Date RDV</span>
-          <span class="field-value" id="lpDateRdv">—</span>
-        </div>
-        <div class="modal-field">
-          <span class="field-label">Nombre de RDVs</span>
-          <span class="field-value" id="lpNbRdvs">—</span>
-        </div>
-        <div class="modal-field">
-          <span class="field-label">Nombre d'audits</span>
-          <span class="field-value" id="lpNbAudits">—</span>
-        </div>
-        <div class="modal-field">
-          <span class="field-label">Première période</span>
-          <span class="field-value" id="lpPremPeriode">—</span>
-        </div>
-        <div class="modal-field">
-          <span class="field-label">Dernière période</span>
-          <span class="field-value" id="lpDernPeriode">—</span>
-        </div>
-        <div class="modal-field">
-          <span class="field-label">Commercial</span>
-          <span class="field-value" id="lpCommercial">—</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Issues suivi de contact -->
-    <div class="lp-issues-section">
-      <div class="lp-section-title">Suivi de contact</div>
-      <div class="lp-issues-row">
-        <div class="lp-issue-field">
-          <span class="field-label">Issue téléphone</span>
-          <select class="issue-select" id="lpIssueTel" onchange="saveIssues()">
-            <option value="">— Choisir —</option>
-            <option value="Confirmé">Confirmé</option>
-            <option value="Annulé">Annulé</option>
-            <option value="Reporté">Reporté</option>
-            <option value="Injoignable">Injoignable</option>
-            <option value="Répondeur">Répondeur</option>
-            <option value="À repositionner">À repositionner</option>
-            <option value="Hors cible">Hors cible</option>
-            <option value="À rappeler">À rappeler</option>
-            <option value="R2 confirmé">R2 confirmé</option>
-          </select>
-        </div>
-        <div class="lp-issue-field">
-          <span class="field-label">Issue RDV</span>
-          <select class="issue-select" id="lpIssueRdv" onchange="saveIssues()">
-            <option value="">— Choisir —</option>
-            <option value="Signé">Signé</option>
-            <option value="Refus">Refus</option>
-            <option value="Réalisé">Réalisé</option>
-            <option value="Reporté">Reporté</option>
-            <option value="Annulé">Annulé</option>
-            <option value="R2 positionné">R2 positionné</option>
-            <option value="R2 refus">R2 refus</option>
-            <option value="Lapin">Lapin</option>
-          </select>
-        </div>
-      </div>
-    </div>
-
-    <!-- Notes Arrow (read-only, from data) -->
-    <div class="lp-notes-original" id="lpOriginalNotesSection">
-      <div class="lp-section-title">Notes Arrow (historique)</div>
-      <div class="notes-box" id="lpOriginalNotes"></div>
-    </div>
-
-    <!-- Personal notes -->
-    <div class="lp-my-notes">
-      <div class="lp-section-title">
-        Mes notes personnelles
-        <span class="lp-note-count" id="lpNoteCount" style="display:none"></span>
-      </div>
-      <div id="lpMyNotesList"></div>
-      <div class="lp-add-note-area">
-        <div class="lp-add-note-title">✏️ Ajouter une note</div>
-        <textarea class="lp-textarea" id="lpNoteTextarea" placeholder="Saisir votre note ici…"></textarea>
-        <button class="btn-primary" id="lpSaveNoteBtn" data-act="note-save">💾 Enregistrer</button>
-      </div>
-    </div>
-
-    <!-- Planifier un RDV -->
-    <div class="lp-plan-rdv">
-      <div class="lp-section-title">📅 Planifier un RDV</div>
-      <div id="lpAgendaStatus"></div>
-      <div class="lp-plan-row">
-        <div class="lp-plan-field">
-          <span class="field-label">Date</span>
-          <input type="date" class="lp-input" id="lpPlanDate">
-        </div>
-        <div class="lp-plan-field">
-          <span class="field-label">Heure</span>
-          <input type="time" class="lp-input" id="lpPlanHeure">
-        </div>
-      </div>
-      <div class="lp-plan-field" style="margin-bottom:12px">
-        <span class="field-label">Note (optionnel)</span>
-        <textarea class="lp-textarea" id="lpPlanNote" placeholder="Objet du RDV…" style="min-height:60px"></textarea>
-      </div>
-      <button class="btn-primary" id="lpAddAgendaBtn" data-act="agenda-add">➕ Ajouter à l'agenda</button>
-    </div>
-
-  </div>
-</div>
-
-<!-- FOOTER -->
-<footer>
-  Arrow CRM &nbsp;•&nbsp; <span>Généré le 12/03/2026</span> &nbsp;•&nbsp; 14 028 leads
-</footer>
-
-<script src="app.js"></script>
+  <div id="offline" class="offline" role="status" hidden>Vous êtes hors ligne. Les modifications ne peuvent pas être enregistrées.</div>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 </body>
 </html>
